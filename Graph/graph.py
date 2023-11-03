@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from Graph.graph_utils import get_tree_node_pos
 
+from QueryAnalyzer.explainer import Explainer
+from QueryAnalyzer.explainers.default_explain import default_explain
+from QueryAnalyzer.utils import get_tree_node_pos
+
 
 class Node:
     def __init__(self, query_plan:dict) -> None:
@@ -19,10 +23,17 @@ class Node:
         self.plan_width = query_plan.get("Plan Width")
         self.filter = query_plan.get("Filter")
         self.raw_json = query_plan
+        self.explanation = self.create_explanation(query_plan)
 
     def __str__(self):
         name_string = f"{self.node_type}\ncost: {self.cost}"
         return name_string
+    
+    @staticmethod
+    def create_explanation(query_plan):
+        node_type = query_plan["Node Type"]
+        explainer = Explainer.explainer_map.get(node_type, default_explain)
+        return explainer(query_plan)
     
     def has_children(self):
         return "Plans" in self.raw_json
@@ -81,6 +92,16 @@ class Graph:
         plt.clf()
         return filename
 
+    def create_explanation(self, node: Node):
+        if not node.has_children:
+            return [node.explanation]
+        else:
+            result = []
+            for child in self.graph[node]:
+                result += self.create_explanation(child)
+            result += [node.explanation]
+            return result
+
 
 if __name__ == "__main__":
     from Database.engine import Engine
@@ -94,5 +115,8 @@ if __name__ == "__main__":
     """
 
     query_json = engine.get_query_plan(raw_query)
+    print(query_json)
     graph = Graph(query_json, raw_query)
-    graph.save_graph_file()
+    explanation = graph.create_explanation(graph.root)
+
+    print(explanation)
