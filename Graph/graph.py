@@ -1,10 +1,11 @@
 import os
 import time
 from typing import List
+from collections import deque
 
 import matplotlib.pyplot as plt
-import networkx as nx
 from Graph.graph_utils import get_tree_node_pos
+from igraph import Graph as IGraph
 
 from QueryAnalyzer.explainer import Explainer
 from QueryAnalyzer.explainers.default_explain import default_explain
@@ -23,6 +24,7 @@ class Node:
         self.plan_width = query_plan.get("Plan Width")
         self.filter = query_plan.get("Filter")
         self.raw_json = query_plan
+        self.children = []
         self.explanation = self.create_explanation(query_plan)
 
     def __str__(self):
@@ -36,71 +38,56 @@ class Node:
         return explainer(query_plan)
     
     def has_children(self):
-        return "Plans" in self.raw_json
+        return bool(self.children)
     
 class Graph:
-    def __init__(self, query_json:dict, raw_query:str):
-        self.graph = nx.DiGraph()
+    def __init__(self, query_json):
         self.root = Node(query_json)
-        self._construct_graph(self.root)
-        self.raw_query = raw_query
+        self.nodes = []
+        self.edges = []
+        self._construct_graph(self.root, query_json)
 
-    def _construct_graph(self, curr_node:Node):
-        self.graph.add_node(curr_node)
-        if curr_node.has_children():
-            for child in curr_node.raw_json["Plans"]:
-                child_node = Node(child)
-                self.graph.add_edge(curr_node, child_node)
-                self._construct_graph(child_node)
+    def _construct_graph(self, parent_node, query_plan):
+        parent_index = len(self.nodes)
+        self.nodes.append(parent_node)
+        if "Plans" in query_plan:
+            for child_plan in query_plan["Plans"]:
+                child_node = Node(child_plan)
+                child_index = len(self.nodes)
+                self.edges.append((parent_index, child_index))
+                parent_node.children.append(child_node)
+                self._construct_graph(child_node, child_plan)
 
     def serialize_graph_operation(self) -> str:
         node_list = [self.root.node_type]
-        for start, end in nx.edge_bfs(self.graph, self.root):
-            node_list.append(end.node_type)
+        queue = deque([self.root])
+        while queue:
+            current_node = queue.popleft()
+            for child in current_node.children:
+                node_list.append(child.node_type)
+                queue.append(child)
         return "#".join(node_list)
 
     def calculate_total_cost(self):
-        return sum([x.cost for x in self.graph.nodes])
+        return sum(node.cost for node in self.nodes)
 
     def calculate_plan_rows(self):
-        return sum([x.plan_rows for x in self.graph.nodes])
+        return sum(node.plan_rows for node in self.nodes)
 
     def calculate_num_nodes(self, node_type: str):
-        node_count = 0
-        for node in self.graph.nodes:
-            if node.node_type == node_type:
-                node_count += 1
-        return node_count
+        return sum(1 for node in self.nodes if node.node_type == node_type)
+
     
     def save_graph_file(self):
-        graph_name = f"graph_{str(time.time())}.png"
-        filename = os.path.join("plots", graph_name)
-        plot_formatter_position = get_tree_node_pos(self.graph, self.root)
-        node_labels = {x: str(x) for x in self.graph.nodes}
-        nx.draw(
-            self.graph,
-            plot_formatter_position,
-            with_labels=True,
-            labels=node_labels,
-            font_size=6,
-            node_size=300,
-            node_color="skyblue",
-            node_shape="s",
-            alpha=1,
-        )
-        plt.savefig(filename)
-        plt.clf()
-        return filename
+        pass
 
     def create_explanation(self, node: Node):
-        if not node.has_children:
-            return [node.explanation]
-        else:
-            result = []
-            for child in self.graph[node]:
-                result += self.create_explanation(child)
-            result += [node.explanation]
-            return result
+        result = []
+        if node.children:
+            for child in node.children:
+                result.extend(self.create_explanation(child))
+        result.append(node.explanation)
+        return result
 
 
 if __name__ == "__main__":

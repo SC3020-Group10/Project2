@@ -73,7 +73,7 @@ class App:
                         raw_query = self.input_box.get_text()
 
                         query_json = engine.get_query_plan(raw_query)
-                        graph = Graph(query_json, raw_query)
+                        graph = Graph(query_json)
 
                         explanation = graph.create_explanation(graph.root)
                         formatted_explanation = ""

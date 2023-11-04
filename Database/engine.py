@@ -1,6 +1,6 @@
+import os
 import psycopg2
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -9,6 +9,11 @@ user = os.getenv("USER")
 password = os.getenv("PASSWORD")
 host = os.getenv("HOST")
 port = os.getenv("PORT")
+# db = "TPC-H"
+# user = "postgres"
+# password = "a"
+# host = "localhost"
+# port = 5432
 
 class Engine:
     def __init__(self) -> None:
