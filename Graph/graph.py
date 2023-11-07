@@ -41,11 +41,11 @@ class Node:
         return bool(self.children)
     
 class Graph:
-    def __init__(self, query_json):
-        self.root = Node(query_json)
-        self.nodes = []
+    def __init__(self, plan):
+        self.root = Node(plan)
+        self.nodes:List[Node] = []
         self.edges = []
-        self._construct_graph(self.root, query_json)
+        self._construct_graph(self.root, plan)
 
     def _construct_graph(self, parent_node, query_plan):
         parent_index = len(self.nodes)
@@ -77,7 +77,6 @@ class Graph:
     def calculate_num_nodes(self, node_type: str):
         return sum(1 for node in self.nodes if node.node_type == node_type)
 
-    
     def save_graph_file(self):
         pass
 
@@ -89,6 +88,16 @@ class Graph:
         result.append(node.explanation)
         return result
 
+class QueryPlan:
+    def __init__(self, query_plan):
+        self.query_plan = query_plan
+        self.plan = query_plan['Plan']
+        self.planning = query_plan['Planning']
+        self.planning_time = query_plan['Planning Time']
+        self.triggers = query_plan['Triggers']
+        self.jit = query_plan['JIT']
+        self.execution_time = query_plan['Execution Time']
+        self.graph = Graph(self.plan)
 
 if __name__ == "__main__":
     from Database.engine import Engine
