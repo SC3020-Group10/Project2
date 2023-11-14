@@ -64,8 +64,17 @@ app.layout = html.Div([
 )
 def parse_sql(n_clicks, table_idx, value):
     if n_clicks > 0:
-        # try:
-        q_plan = QueryPlan(engine.get_query_plan(value))     
+        try:
+            q_plan = QueryPlan(engine.get_query_plan(value))
+        except Exception as e:
+            engine.conn.rollback()
+            return [
+                dcc.Markdown('<h2>There was a problem with executing your query. Please try again with a different query.</h2>', dangerously_allow_html=True),
+                go.Figure(), 
+                html.Div(''), 
+                [],
+                go.Figure()
+            ]
         block_size = engine.get_block_size()
         tables_name = engine.get_tables(value)
 
@@ -116,19 +125,27 @@ def parse_sql(n_clicks, table_idx, value):
         ])
 
         # Heatmap
-        blocks = engine.get_blocks(value, table_idx)
-        heatmap = generate_heatmap(blocks)
+        try:
+            blocks = engine.get_blocks(value, table_idx)
+            heatmap = generate_heatmap(blocks)
 
-        fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
-        return [
-            dcc.Markdown(exp_f, dangerously_allow_html=True), 
-            fig, 
-            query_info, 
-            [{'label': name, 'value': i} for i, name in enumerate(tables_name)], 
-            heatmap
-        ]
-        # except Exception as e:
-        #     return [html.Div(f'Error: {str(e)}'), go.Figure()]
+            fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
+            return [
+                dcc.Markdown(exp_f, dangerously_allow_html=True), 
+                fig, 
+                query_info, 
+                [{'label': name, 'value': i} for i, name in enumerate(tables_name)], 
+                heatmap
+            ]
+        except Exception as e:
+            exp_f = "<h2>There was an error in the estimation of block usage</h2>\n" + exp_f
+            return [
+                dcc.Markdown(exp_f, dangerously_allow_html=True), 
+                go.Figure(), 
+                query_info,
+                [],
+                go.Figure()
+            ]
     return [
         html.Div(''), 
         go.Figure(), 
@@ -136,6 +153,7 @@ def parse_sql(n_clicks, table_idx, value):
         [],
         go.Figure()
     ]
+    
 
 if __name__ == "__main__":
     app.run_server(debug=True, threaded=True)

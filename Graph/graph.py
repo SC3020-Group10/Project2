@@ -95,7 +95,7 @@ class QueryPlan:
         self.planning = query_plan['Planning']
         self.planning_time = query_plan['Planning Time']
         self.triggers = query_plan['Triggers']
-        self.jit = query_plan['JIT']
+        # self.jit = query_plan['JIT']
         self.execution_time = query_plan['Execution Time']
         self.graph = Graph(self.plan)
 
