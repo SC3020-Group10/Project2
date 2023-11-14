@@ -1,7 +1,7 @@
 import os
 import psycopg2
 from sql_metadata import Parser
-from collections import Counter
+import sqlparse
 from ast import literal_eval
 from dotenv import load_dotenv
 
@@ -12,26 +12,56 @@ user = os.getenv("USER")
 password = os.getenv("PASSWORD")
 host = os.getenv("HOST")
 port = os.getenv("PORT")
-# db = "TPC-H"
-# user = "postgres"
-# password = "a"
-# host = "localhost"
-# port = 5432
+
+def remove_group_order_from_query(statement:sqlparse.sql.Statement, table_name):
+    new_query = ""
+    skip = False
+
+    for token in statement.tokens:
+        if skip and token.ttype is None:
+            skip = False
+            continue
+
+        if token.value == "SELECT":
+            new_query += f"{token.value} ({table_name}.ctid::text::point)[0]::bigint"
+            skip = True
+        
+        elif token.value == "GROUP BY" or token.value == "ORDER BY":
+            skip = True
+        
+        else:
+            new_query += token.value
+
+    return sqlparse.format(new_query, reindent=True, keyword_case='upper')
 
 class Engine:
     def __init__(self) -> None:
         self.conn = psycopg2.connect(database=db, user=user, password=password, host=host, port=port)
-        self.cursor = self.conn.cursor()
+        self.block_size = None
 
-    def get_query_plan(self, raw_query:str) -> dict:
-        self.cursor.execute(f"EXPLAIN (ANALYZE, BUFFERS, COSTS, FORMAT JSON) {raw_query}")
-        result = self.cursor.fetchone()[0]
+    def get_query_plan(self, raw_query:str, enable_seqscan:bool, enable_indexscan:bool, enable_bitmapscan:bool) -> dict:
+        query = f"EXPLAIN (ANALYZE, BUFFERS, COSTS, FORMAT JSON) {raw_query}"
+        
+        if not enable_seqscan:
+            query = "SET LOCAL enable_seqscan = OFF;\n" + query
+        if not enable_indexscan:
+            query = "SET LOCAL enable_indexscan = OFF;\n" + query
+        if not enable_bitmapscan:
+            query = "SET LOCAL enable_bitmapscan = OFF;\n" + query
+
+        cursor = self.conn.cursor()
+        cursor.execute(query)
+        result = cursor.fetchone()[0]
+        cursor.execute("ROLLBACK;")
         return result[0]
     
     def get_block_size(self):
-        self.cursor.execute("show block_size")
-        result = self.cursor.fetchone()[0]
-        return result
+        if self.block_size is None:
+            cursor = self.conn.cursor()
+            cursor.execute("show block_size")
+            result = cursor.fetchone()[0]
+            self.block_size = result
+        return self.block_size
     
     def get_tables(self, raw_query:str):
         parser = Parser(raw_query)
@@ -45,56 +75,33 @@ class Engine:
         table_name = self.get_tables(raw_query)[table_idx]
         table_aliases = self.get_table_aliases(raw_query)
 
-        try:
-            for alias, tb_name in table_aliases.items():
-                if table_name == tb_name:
-                    table_name = alias
-                    break
+        statement = sqlparse.format(raw_query, reindent=True, keyword_case='upper')
+        statement = sqlparse.parse(statement)[0]
 
-            raw_query_lowercase = raw_query.lower()
-            raw_query = raw_query[:7] + f"{table_name}.ctid " + raw_query[raw_query_lowercase.find("from"):]
+        success = False
+        for alias, tb_name in table_aliases.items():
+            if success:
+                break
 
-            raw_query_lowercase = raw_query.lower()
-            if "group by" not in raw_query_lowercase:            
-                if "order by" not in raw_query_lowercase:
-                    if raw_query_lowercase[-1] == ";":
-                        raw_query = raw_query[:-1] + f" ORDER BY {table_name}.ctid;"
-                    else:
-                        raw_query += f" ORDER BY {table_name}.ctid;"
+            if table_name == tb_name:
+                try:
+                    new_query = remove_group_order_from_query(statement, table_name=alias)
+                    cursor = self.conn.cursor()
+                    cursor.execute(new_query)
+                    success = True
+                except:
+                    self.conn.rollback()
+                    cursor = self.conn.cursor()
+                    new_query = remove_group_order_from_query(statement, table_name=table_name)
+                    cursor.execute(new_query)
+                    success = True
 
-                else:
-                    raw_query = raw_query[:raw_query_lowercase.find("order by")] + f"ORDER BY {table_name}.ctid;"
+        if not success:
+            new_query = remove_group_order_from_query(statement, table_name=table_name)
+            cursor = self.conn.cursor()
+            cursor.execute(new_query)
 
-            else:
-                raw_query = raw_query[:raw_query_lowercase.find("group by")] + f"ORDER BY {table_name}.ctid;"
+        ctids = cursor.fetchall()
+        ctids = [c[0] for c in ctids]
 
-            self.cursor.execute(raw_query)
-            ctids = self.cursor.fetchall()
-        
-        except:
-            self.conn.rollback()
-            self.cursor = self.conn.cursor()
-            table_name = self.get_tables(raw_query)[table_idx]
-
-            raw_query_lowercase = raw_query.lower()
-            raw_query = raw_query[:7] + f"{table_name}.ctid " + raw_query[raw_query_lowercase.find("from"):]
-
-            raw_query_lowercase = raw_query.lower()
-            if "group by" not in raw_query_lowercase:            
-                if "order by" not in raw_query_lowercase:
-                    if raw_query_lowercase[-1] == ";":
-                        raw_query = raw_query[:-1] + f" ORDER BY {table_name}.ctid;"
-                    else:
-                        raw_query += f" ORDER BY {table_name}.ctid;"
-
-                else:
-                    raw_query = raw_query[:raw_query_lowercase.find("order by")] + f"ORDER BY {table_name}.ctid;"
-
-            else:
-                raw_query = raw_query[:raw_query_lowercase.find("group by")] + f"ORDER BY {table_name}.ctid;"
-
-            self.cursor.execute(raw_query)
-            ctids = self.cursor.fetchall()
-
-        ctids = [literal_eval(c[0])[0] for c in ctids]
         return ctids
