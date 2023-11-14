@@ -52,7 +52,7 @@ class Engine:
         cursor = self.conn.cursor()
         cursor.execute(query)
         result = cursor.fetchone()[0]
-        cursor.execute("ROLLBACK;")
+        cursor.execute("COMMIT;")
         return result[0]
     
     def get_block_size(self):
@@ -60,7 +60,7 @@ class Engine:
             cursor = self.conn.cursor()
             cursor.execute("show block_size")
             result = cursor.fetchone()[0]
-            self.block_size = result
+            self.block_size = int(result)
         return self.block_size
     
     def get_tables(self, raw_query:str):

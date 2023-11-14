@@ -39,12 +39,14 @@ def generate_histogram(blocks):
     heatmap = px.histogram(
         blocks, 
         range_y=[0, engine.get_block_size()],
-        title="Number of tuples accessed per data block"
+        title="Number of tuples accessed per data block",
+        nbins=max(blocks)
     )
     heatmap.update_layout(
         xaxis_title="Data Blocks",
         yaxis_title="Number of tuples"
     )
+    heatmap.data[0].hovertemplate = "Block Number: %{x}<br>Number of tuples: %{y}"
     return heatmap
 
 def generate_qep_info(graph, q_plan):
@@ -71,6 +73,14 @@ def generate_qep_info(graph, q_plan):
                 html.Div([
                     html.H2('Estimated Cost'),
                     html.P(f"{graph.root.cost}")
+                ]),
+                html.Div([
+                    html.H2('Data read from disk'),
+                    html.P(f"{q_plan.read_blocks * engine.get_block_size()} bytes")
+                ]),
+                html.Div([
+                    html.H2('Data read from cache'),
+                    html.P(f"{q_plan.hit_blocks * engine.get_block_size()} bytes")
                 ]),
             ]
         )
@@ -131,20 +141,16 @@ app.layout = html.Div([
 def parse_sql(n_clicks, table_idx, enable_seqscan, enable_indexscan, enable_bitmapscan, value):
     if n_clicks > 0:
         try:
-            q_plan = QueryPlan(engine.get_query_plan(value))
+            q_plan = QueryPlan(engine.get_query_plan(value, enable_seqscan, enable_indexscan, enable_bitmapscan))
         except Exception as e:
             engine.conn.rollback()
             return [
-                dcc.Markdown('<h2>There was a problem with executing your query. Please try again with a different query.</h2>', dangerously_allow_html=True),
+                dcc.Markdown(f'<h2>There was a problem with executing your query: {e}. Please try again with a different query.</h2>', dangerously_allow_html=True),
                 go.Figure(), 
                 html.Div(''), 
                 [],
                 go.Figure()
             ]
-        block_size = engine.get_block_size()
-        print(f"enable_seqscan: {enable_seqscan}")
-        print(f"enable_indexscan: {enable_indexscan}")
-        print(f"enable_bitmapscan: {enable_bitmapscan}")
         q_plan = QueryPlan(engine.get_query_plan(value, enable_seqscan, enable_indexscan, enable_bitmapscan))     
         tables_name = engine.get_tables(value)
 

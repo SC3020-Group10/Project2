@@ -96,6 +96,8 @@ class QueryPlan:
         self.planning_time = query_plan['Planning Time']
         self.triggers = query_plan['Triggers']
         self.execution_time = query_plan['Execution Time']
+        self.read_blocks = int(query_plan['Plan']["Shared Read Blocks"])
+        self.hit_blocks = int(query_plan['Plan']["Shared Hit Blocks"])
         self.graph = Graph(self.plan)
 
 if __name__ == "__main__":
