@@ -18,8 +18,8 @@ myenv\Scripts\activate
 **conda**
 
 ```bash
-conda create -n myenv python=3.11
-conda activate myenv
+conda create -n ENV_NAME python=3.11
+conda activate ENV_NAME
 conda install pip
 ```
 
