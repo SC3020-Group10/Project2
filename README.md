@@ -37,3 +37,6 @@ port=[The port number your PostgreSQL server is listening on]
 
 7. Start the web application using `python project.py` or `setup.bat` or `./setup.sh`
 8. The web application will launch on `localhost:8050`
+
+# Installation notes
+1. Do ensure that the sql files are in `<root folder>/tables` and the csv files are in `<root folder>/tables/files` as the sql files assume this directory structure
