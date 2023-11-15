@@ -2,17 +2,21 @@
 
 # Installation
 1. Install `PostgreSQL` [here](https://www.postgresql.org/download/)
-2. Download the TPC-H csv files [here](https://drive.google.com/drive/folders/1sAwyOoHuS35j6GTRL8-COcknz6Lo1S9k?usp=sharing)
-3. Import the TPC-H dataset into your PostgreSQL database
-4. Navigate to the root of the project
-5. Create a new python environment and install the dependencies using `pip install -r requirements.txt`
-6. Create a `.env` file in the root of the project if it is not present
-7. Add or update these environment variables in the `.env` file
+2. Clone this repository using `git clone https://github.com/SC3020-Group10/Project2.git`
+3. Navigate to the root folder of this project
+5. Download the TPC-H csv files and sql setup files [here](https://drive.google.com/drive/folders/1sAwyOoHuS35j6GTRL8-COcknz6Lo1S9k?usp=sharing) and place it into the root folder.
+6. Create a new python environment using a package manager such as `venv` or `conda` (Note: This project was tested on python 3.11)
+
+**venv**
 ```
-DATABASE: The name of your database.
-USER: Your database username.
-PASSWORD: Your database password.
-HOST: The hostname or IP address of your database server.
-PORT: The port number your database server is listening on.
+python -m venv myenv
+myenv\Scripts\activate
 ```
-8. Start the web application using `python project.py` or `python3 project.py`
+**conda**
+```
+conda create -n myenv python=3.11
+conda activate myenv
+conda install pip
+```
+7. Install python dependencies and import the TPC-H dataset into your PostgreSQL database by running `./setup.sh [Your PostgreSQL username] [Your PostgreSQL password]`
+8. Start the web application using `./run.sh`
