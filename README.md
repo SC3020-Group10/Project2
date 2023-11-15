@@ -1,8 +1,8 @@
 # Project2: Query Analyzer
 
 # Installation
-1. Install `PostgreSQL` [here](https://www.postgresql.org/download/){:target="_blank"}
-2. Download the TPC-H csv files [here](https://drive.google.com/drive/folders/1sAwyOoHuS35j6GTRL8-COcknz6Lo1S9k?usp=sharing){:target="_blank"}
+1. Install `PostgreSQL` [here](https://www.postgresql.org/download/)
+2. Download the TPC-H csv files [here](https://drive.google.com/drive/folders/1sAwyOoHuS35j6GTRL8-COcknz6Lo1S9k?usp=sharing)
 3. Import the TPC-H dataset into your PostgreSQL database
 4. Navigate to the root of the project
 5. Create a new python environment and install the dependencies using `pip install -r requirements.txt`
