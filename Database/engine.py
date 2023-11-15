@@ -2,7 +2,6 @@ import os
 import psycopg2
 from sql_metadata import Parser
 import sqlparse
-from ast import literal_eval
 from dotenv import load_dotenv
 
 load_dotenv()

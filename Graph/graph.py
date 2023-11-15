@@ -1,16 +1,8 @@
-import os
-import time
 from typing import List
 from collections import deque
 
-import matplotlib.pyplot as plt
-from Graph.graph_utils import get_tree_node_pos
-from igraph import Graph as IGraph
-
 from QueryAnalyzer.explainer import Explainer
 from QueryAnalyzer.explainers.default_explain import default_explain
-from QueryAnalyzer.utils import get_tree_node_pos
-
 
 class Node:
     def __init__(self, query_plan:dict) -> None:
