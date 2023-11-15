@@ -39,4 +39,5 @@ port=[The port number your PostgreSQL server is listening on]
 8. The web application will launch on `localhost:8050`
 
 # Installation notes
-1. Do ensure that the sql files are in `<root folder>/tables` and the csv files are in `<root folder>/tables/files` as the sql files assume this directory structure
+1. Do ensure that the sql files are in `<root folder>/tables` and the csv files are in `<root folder>/tables/files` as the sql files assume this directory structure.
+2. The setup script could take a long while to load at `lineitem` table as there are 6001215 rows.
