@@ -1,4 +1,4 @@
 from interface import app
 
 if __name__ == "__main__":
-    app.run_server(debug=True, threaded=True)
+    app.run_server(threaded=True, port=8050)
