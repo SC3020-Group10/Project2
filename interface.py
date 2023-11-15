@@ -16,6 +16,7 @@ engine = Engine()
 def create_plotly_traces(pos:dict, graph:Graph):
     nt_x = []
     nt_y = []
+    nt_m = []
     nt_t = []
     et_x = []
     et_y = []
@@ -25,6 +26,7 @@ def create_plotly_traces(pos:dict, graph:Graph):
         nt_y.append(position[1])
         node:Node = graph.nodes[node_id]
         nt_t.append(f"{node.node_type}<br>Cost:{node.cost}")
+        nt_m.append(node.explanation)
 
     for start_node, end_node in graph.edges:
         start_position = pos[start_node]
@@ -32,21 +34,34 @@ def create_plotly_traces(pos:dict, graph:Graph):
         et_x += [start_position[0], end_position[0], None]
         et_y += [start_position[1], end_position[1], None]
     edge_trace = go.Scatter(x=et_x, y=et_y, line=dict(width=0.5, color='#888'), hoverinfo='none', mode='lines')
-    node_trace = go.Scatter(x=nt_x, y=nt_y, text=nt_t, mode='markers+text', hoverinfo='text', marker=dict(showscale=False, color=[], size=10, line_width=2))
-
-    return edge_trace, node_trace
+    marker_trace = go.Scatter(
+        x=nt_x, 
+        y=nt_y, 
+        mode='markers',
+        hoverinfo='text',
+        text=nt_m,  # This will be the hover text for markers
+        marker=dict(showscale=False, color=[], size=10, line_width=2)
+    )
+    text_trace = go.Scatter(
+        x=nt_x,
+        y=nt_y,
+        text=nt_t,  # The text labels you want to display
+        mode='text',
+        hoverinfo='none'  # Usually, text labels don't have hover text
+    )
+    return edge_trace, marker_trace, text_trace
 
 
 # Creates histogram of the number of tuples accessed per data block.
 def generate_histogram(blocks):
     heatmap = px.histogram(
-        blocks, 
-        range_y=[0, engine.get_block_size()],
+        blocks,
         title="Number of tuples accessed per data block"
     )
     heatmap.update_layout(
         xaxis_title="Data Blocks",
-        yaxis_title="Number of tuples"
+        yaxis_title="Number of tuples",
+        showlegend=False
     )
     return heatmap
 
@@ -169,16 +184,18 @@ def parse_sql(n_clicks, table_idx, enable_seqscan, enable_indexscan, enable_bitm
             ig.add_vertex(node)
         for start_node, end_node in graph.edges:
             ig.add_edge(start_node, end_node)
-        layout = ig.layout("tree", 0)
-        pos = {i: layout[i] for i, _ in enumerate(graph.nodes)}
-        edge_trace, node_trace = create_plotly_traces(pos, graph)
-        layout = go.Layout(showlegend=False, hovermode='closest',
-                            margin=dict(b=20,l=5,r=5,t=40),
-                            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
+        layout = ig.layout('rt', root=[0], mode="out")
+        pos = {i: (layout[i][0], -layout[i][1]) for i, _ in enumerate(graph.nodes)}
+        edge_trace, marker_trace, text_trace = create_plotly_traces(pos, graph)
 
-        # QEP Tree
-        fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
+        layout = go.Layout(
+            showlegend=False,
+            hovermode='closest',
+            margin=dict(b=20, l=5, r=5, t=40),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+        )
+        fig = go.Figure(data=[edge_trace, marker_trace, text_trace], layout=layout)
 
         # Information about Query
         query_info = generate_qep_info(graph, q_plan)
@@ -187,7 +204,6 @@ def parse_sql(n_clicks, table_idx, enable_seqscan, enable_indexscan, enable_bitm
             blocks = engine.get_blocks(value, table_idx)
             heatmap = generate_histogram(blocks)
 
-            fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
             return [
                 dcc.Markdown(exp_f, dangerously_allow_html=True), 
                 fig, 
