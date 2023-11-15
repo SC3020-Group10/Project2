@@ -20,3 +20,4 @@ conda install pip
 ```
 7. Install python dependencies and import the TPC-H dataset into your PostgreSQL database by running `./setup.sh [Your PostgreSQL username] [Your PostgreSQL password]`
 8. Start the web application using `./run.sh` or `python project.py`
+9. The web application will launch on `localhost:8050`
