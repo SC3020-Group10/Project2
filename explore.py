@@ -69,7 +69,7 @@ class Engine:
             cursor = self.conn.cursor()
             cursor.execute("show block_size")
             result = cursor.fetchone()[0]
-            self.block_size = result
+            self.block_size = int(result)
         return self.block_size
     
     def get_tables(self, raw_query:str):
@@ -204,4 +204,6 @@ class QueryPlan:
         self.planning_time = query_plan['Planning Time']
         self.triggers = query_plan['Triggers']
         self.execution_time = query_plan['Execution Time']
+        self.read_blocks = int(query_plan['Plan']["Shared Read Blocks"])
+        self.hit_blocks = int(query_plan['Plan']["Shared Hit Blocks"])
         self.graph = Graph(self.plan)

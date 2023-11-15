@@ -91,6 +91,14 @@ def generate_qep_info(graph, q_plan):
                     html.H2('Estimated Cost'),
                     html.P(f"{graph.root.cost}")
                 ]),
+                html.Div([
+                    html.H2('Data read from disk'),
+                    html.P(f"{q_plan.read_blocks * engine.get_block_size()} bytes")
+                ]),
+                html.Div([
+                    html.H2('Data read from cache'),
+                    html.P(f"{q_plan.hit_blocks * engine.get_block_size()} bytes")
+                ]),
             ]
         )
     ])
