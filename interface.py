@@ -165,10 +165,6 @@ def parse_sql(n_clicks, table_idx, enable_seqscan, enable_indexscan, enable_bitm
                 [],
                 go.Figure()
             ]
-        block_size = engine.get_block_size()
-        print(f"enable_seqscan: {enable_seqscan}")
-        print(f"enable_indexscan: {enable_indexscan}")
-        print(f"enable_bitmapscan: {enable_bitmapscan}")
         tables_name = engine.get_tables(value)
 
         # Query Explanation
