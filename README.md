@@ -35,5 +35,5 @@ host=[IP address of your PostgreSQL server]
 port=[The port number your PostgreSQL server is listening on]
 ```
 
-7. Start the web application using `./run.sh` or `python project.py`
+7. Start the web application using `python project.py` or `setup.bat` or `./setup.sh`
 8. The web application will launch on `localhost:8050`
